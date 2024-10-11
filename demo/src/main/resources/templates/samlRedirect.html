@@ -1,0 +1,73 @@
+<!-- <!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<title>SAML Request Redirect</title>
+
+</head>
+<body>
+	<h1>Submitting SAML Request...</h1>
+	<div>
+		<form id="saml-form" method="get" th:action="${entityEndpoint}"
+			autocomplete="off">
+			<input type="hidden" th:name="SAMLRequest" th:value="${samlRequest}" />
+			<div th:if="${relayState}">
+				<input type="hidden" name="RelayState" th:value="${relayState}" />
+			</div>
+		</form>
+		<script type="text/javascript">
+			// Automatic form submission
+			(function() {
+				document.getElementById('saml-form').submit();
+			})();
+		</script>
+	</div>
+
+</body>
+</html> -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>SAML Request Redirect</title>
+</head>
+<body>
+    <h1>Redirecting with SAML Request...</h1>
+    
+    <script type="text/javascript" th:inline="javascript">
+    (function() {
+        // Get the SAMLRequest, RelayState, and the endpoint URL from the Thymeleaf variables
+        var samlRequest = /*[[${samlRequest}]]*/ '[[${samlRequest}]]'; // Thymeleaf will insert the actual value
+        var entityEndpoint = '[[${entityEndpoint}]]'; // The URL to redirect to
+        var relayState = '[[${relayState}]]'; // Optional RelayState
+
+        // Ensure the entityEndpoint is correctly formatted without extra quotes or invalid characters
+        entityEndpoint = entityEndpoint.replace(/"/g, '').trim();
+
+        // Log the initial endpoint
+        console.log('Initial Endpoint:', entityEndpoint);
+
+        // Construct the URL with SAMLRequest as a query parameter
+        var redirectUrl = entityEndpoint + '?SAMLRequest=' + encodeURIComponent(samlRequest);
+        
+        // If RelayState exists and is not empty, append it to the URL
+        if (relayState && relayState !== '') {
+            redirectUrl += '&RelayState=' + encodeURIComponent(relayState);
+        }
+
+        // Log the constructed redirect URL to the console for debugging
+        console.log('Constructed Redirect URL:', redirectUrl);
+
+        // Ensure the constructed URL is valid before redirecting
+        try {
+            // Check if the URL is valid
+            new URL(redirectUrl); // This will throw if the URL is invalid
+            // Redirect to the constructed URL
+            window.location.href = redirectUrl;
+        } catch (e) {
+            console.error('Invalid URL:', e);
+        }
+    })();
+</script>
+
+    
+</body>
+</html>

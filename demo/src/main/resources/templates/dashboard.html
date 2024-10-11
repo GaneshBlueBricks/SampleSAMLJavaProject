@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<title>Dashboard</title>
+<style>
+table {
+	width: 100%; /* Make the table fit the screen */
+	border-collapse: collapse;
+	table-layout: fixed;
+	/* Ensures the table columns stay in fixed proportions */
+}
+
+th, td {
+	padding: 10px;
+	text-align: left;
+	border: 1px solid black;
+	word-wrap: break-word; /* Ensures text wraps within the cell */
+}
+
+th {
+	background-color: #f2f2f2;
+}
+
+td.key-column {
+	width: 30%; /* Set width for the key column */
+}
+
+td.value-column {
+	width: 70%; /* Set width for the value column */
+}
+</style>
+<script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Fetch the jwt and userId from the table data
+            var jwt = null;
+            var userId = null;
+
+            document.querySelectorAll('tr').forEach(function (row) {
+                var key = row.querySelector('.key-column') ? row.querySelector('.key-column').innerText : null;
+                var value = row.querySelector('.value-column') ? row.querySelector('.value-column').innerText : null;
+                
+                if (key === 'jwt') {
+                    jwt = value;
+                }
+                
+                if (key === 'userId') {
+                    userId = value;
+                }
+            });
+
+            // Save jwt and userId to session storage if they exist
+            if (jwt && userId) {
+                sessionStorage.setItem('jwt', jwt);
+                sessionStorage.setItem('userId', userId);
+
+
+                // Start the token validation scheduler
+                 console.log('calling schedular'); // Log baseUrl to the console
+                startTokenValidationScheduler(jwt, null, userId);
+            }
+        });
+        
+        function startTokenValidationScheduler(jwt, accountId, userId) {
+            var baseUrl ='https://access.axiomprotect.com:6653/AxiomProtect'; // Get the base URL from application.properties
+            console.log('Base URL:', baseUrl); // Log baseUrl to the console
+            setInterval(async function() {
+                try {
+                	 const url = new URL(baseUrl + '/v1/saml/userSessionValidate');
+                     url.searchParams.append('accountId', accountId);
+                     url.searchParams.append('userId', userId);
+                     url.searchParams.append('accessToken', jwt);
+
+                     const response = await fetch(url, {
+                         method: 'GET',
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'authToken': jwt
+                         }
+                     });
+
+                    if (response.ok) {
+                    	console.log('Session is active.');
+                    	 const result = await response.json();
+                    	 console.log(result);
+                         if (result.resultCode !== 0) {
+                             alert('Session expired. Logging out.');
+                             clearSessionStorage();
+                             window.location.href = '/logout'; // Log out the user
+                         }
+                    } else {
+                    	console.log('Response not okay.');                        
+                    }
+                } catch (error) {
+                    console.error('Error while validating token:', error);
+                }
+            }, 5000); // Check every 5 minutes (300000 ms)
+        }
+
+        function clearSessionStorage() {
+            sessionStorage.removeItem('jwt');
+            sessionStorage.removeItem('userId');
+            sessionStorage.removeItem('accountId');
+        }
+        async function handleLogout(event) {
+            event.preventDefault(); // Prevent the form from submitting the traditional way
+            
+            const jwt = sessionStorage.getItem('jwt');
+            const userId = sessionStorage.getItem('userId');
+
+            // Construct the logout URL with query parameters
+            const logoutUrl = new URL('/logout', window.location.origin);
+            logoutUrl.searchParams.append('accessToken', jwt);
+            logoutUrl.searchParams.append('userId', userId);
+
+            const response = await fetch(logoutUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                console.log('Logged out successfully.');
+                clearSessionStorage();
+                window.location.href = '/login'; // Redirect to login page
+            } else {
+                console.error('Logout failed.');
+            }
+        }
+        function includeTokenInLogoutForm() {
+    		// Retrieve the accountId from cookies
+
+    		// Retrieve the accessToken from session storage
+    		var accessToken = sessionStorage.getItem("jwt");
+
+    		// Retrieve the userid from session storage
+    		var userid = sessionStorage.getItem("userId");
+
+    		// Set the values of the hidden input fields in the logout form
+    		if (accessToken) {
+    			document.getElementById("logout-accessToken").value = accessToken;
+    		}
+    		if (userid) {
+    			document.getElementById("logout-userid").value = userid;
+    		}
+    	}
+    </script>
+</head>
+<body onload="includeTokenInLogoutForm()">
+	<h1>Welcome to the Dashboard!</h1>
+	<p>You have successfully logged in.</p>
+
+	<h2>SAML Response Details</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>Key</th>
+				<th>Value</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="entry : ${samlResponseMap}">
+				<td th:text="${entry.key}" class="key-column"></td>
+				<td th:text="${entry.value}" class="value-column"></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<!-- <a th:href="@{/logout}">Logout</a> -->
+	<form action="/logoout" method="post" onsubmit="clearSessionStorage()">
+		<input type="hidden" name="accessToken" id="logout-accessToken"> 
+		<input type="hidden" name="userId" id="logout-userid">
+		<button type="submit">Logout</button>
+	</form>
+</body>
+</html>

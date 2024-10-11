@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<title>SAML Request Redirect</title>
+
+</head>
+<body>
+	<h1>Submitting SAML Request...</h1>
+	<div>
+		<form id="saml-form" method="post" th:action="${entityEndpoint}"
+			autocomplete="off">
+			<input type="hidden" th:name="SAMLRequest" th:value="${samlRequest}" />
+			<div th:if="${relayState}">
+				<input type="hidden" name="RelayState" th:value="${relayState}" />
+			</div>
+		</form>
+		<script type="text/javascript">
+			// Automatic form submission
+			(function() {
+				document.getElementById('saml-form').submit();
+			})();
+		</script>
+	</div>
+
+</body>
+</html>
